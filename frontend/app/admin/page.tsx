@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminHeader, { HEADER_HEIGHT } from '../../components/AdminHeader'
 import AdminSidebar from '../../components/AdminSidebar'
+import { verifyAuth } from '../../utils/auth'
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -12,24 +13,19 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const res = await fetch(`${apiBase}/api/posts`, {
-          method: 'GET',
-          credentials: 'include'
-        })
-        if (!res.ok) {
-          router.push('/admin/login')
-          return
-        }
-        setIsCheckingAuth(false)
-      } catch (err) {
-        router.push('/admin/login')
+      const isValid = await verifyAuth(apiBase)
+      if (!isValid) {
+        router.replace('/admin/login')
+        return
       }
+      setIsCheckingAuth(false)
     }
     checkAuth()
   }, [router, apiBase])
 
-  if (isCheckingAuth) return null
+  if (isCheckingAuth) {
+    return null
+  }
 
   const menuItems = [
     {

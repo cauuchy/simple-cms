@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import AdminHeader, { HEADER_HEIGHT } from '../../../../components/AdminHeader'
 import AdminSidebar from '../../../../components/AdminSidebar'
+import { verifyAuth } from '../../../../utils/auth'
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
 export default function DeletePostsPage() {
+  const router = useRouter()
   const [posts, setPosts] = useState<any[]>([])
   const [error, setError] = useState('')
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
@@ -18,29 +21,22 @@ export default function DeletePostsPage() {
     if (res.ok) {
       setPosts(await res.json())
     } else if (res.status === 401) {
-      window.location.href = '/admin/login'
+      router.replace('/admin/login')
     }
   }
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const res = await fetch(`${apiBase}/api/posts`, {
-          method: 'GET',
-          credentials: 'include'
-        })
-        if (!res.ok) {
-          window.location.href = '/admin/login'
-          return
-        }
-        setIsCheckingAuth(false)
-        fetchPosts()
-      } catch (err) {
-        window.location.href = '/admin/login'
+      const isValid = await verifyAuth(apiBase)
+      if (!isValid) {
+        router.replace('/admin/login')
+        return
       }
+      setIsCheckingAuth(false)
+      fetchPosts()
     }
     checkAuth()
-  }, [])
+  }, [router, apiBase])
 
   const deletePost = async (id: number) => {
     if (!confirm('この記事を削除してもよろしいですか？')) return
@@ -53,7 +49,9 @@ export default function DeletePostsPage() {
     fetchPosts()
   }
 
-  if (isCheckingAuth) return null
+  if (isCheckingAuth) {
+    return null
+  }
 
   return (
     <div>

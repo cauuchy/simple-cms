@@ -61,6 +61,39 @@ public class AuthController {
         return ResponseEntity.ok(responseMap);
     }
 
+    @GetMapping("/verify")
+    public ResponseEntity<?> verify(jakarta.servlet.http.HttpServletRequest request) {
+        String token = null;
+        
+        // Cookieからトークン取得
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("authToken".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        
+        if (token == null) {
+            return ResponseEntity.status(401).build();
+        }
+        
+        try {
+            String username = jwtService.extractUsername(token);
+            java.util.Optional<com.simple.cms.model.User> userOpt = userRepository.findByUsername(username);
+            if (!userOpt.isPresent()) {
+                return ResponseEntity.status(401).build();
+            }
+            
+            java.util.Map<String, String> responseMap = new java.util.HashMap<>();
+            responseMap.put("username", username);
+            return ResponseEntity.ok(responseMap);
+        } catch (Exception e) {
+            return ResponseEntity.status(401).build();
+        }
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
         // Cookieクリア

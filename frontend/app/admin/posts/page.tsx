@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import AdminHeader, { HEADER_HEIGHT } from '../../../components/AdminHeader'
 import AdminSidebar from '../../../components/AdminSidebar'
+import { verifyAuth } from '../../../utils/auth'
 
 const RichEditor = dynamic(() => import('../../../components/RichTextEditor'), { ssr: false })
 
@@ -19,22 +20,15 @@ export default function AdminPostsPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const res = await fetch(`${apiBase}/api/posts`, {
-          method: 'GET',
-          credentials: 'include'
-        })
-        if (!res.ok) {
-          router.push('/admin/login')
-          return
-        }
-        setIsCheckingAuth(false)
-      } catch (err) {
-        router.push('/admin/login')
+      const isValid = await verifyAuth(apiBase)
+      if (!isValid) {
+        router.replace('/admin/login')
+        return
       }
+      setIsCheckingAuth(false)
     }
     checkAuth()
-  }, [router])
+  }, [router, apiBase])
 
   const createPost = async () => {
     setError('')
@@ -51,7 +45,9 @@ export default function AdminPostsPage() {
     router.push(`/posts/${data.id}`)
   }
 
-  if (isCheckingAuth) return null
+  if (isCheckingAuth) {
+    return null
+  }
 
   return (
     <div>
