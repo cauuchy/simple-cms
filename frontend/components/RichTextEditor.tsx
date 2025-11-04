@@ -314,17 +314,29 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
   }
 
   const sanitize = (node: Node): Node | DocumentFragment => {
-    if (node.nodeType === Node.TEXT_NODE) return node.cloneNode()
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.cloneNode()
+    }
 
     if (node.nodeType !== Node.ELEMENT_NODE) return document.createTextNode('')
 
     const el = node as HTMLElement
     const tag = el.tagName.toLowerCase()
-    const allowed = ['b', 'strong', 'i', 'em', 's', 'del', 'span']
+    const allowed = ['b', 'strong', 'i', 'em', 's', 'del', 'span', 'br']
+    const blockTags = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'tr', 'td', 'th']
+
+    // brタグは子要素を持たないのでそのまま返す
+    if (tag === 'br') {
+      return document.createElement('br')
+    }
 
     if (!allowed.includes(tag)) {
       const fragment = document.createDocumentFragment()
-      el.childNodes.forEach((child) => fragment.appendChild(sanitize(child)))
+      
+      el.childNodes.forEach((child) => {
+        fragment.appendChild(sanitize(child))
+      })
+      
       return fragment
     }
 
@@ -355,7 +367,17 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
     const sanitized = document.createDocumentFragment()
-    doc.body.childNodes.forEach((node) => sanitized.appendChild(sanitize(node)))
+    const blockTags = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'tr', 'td', 'th']
+    
+    doc.body.childNodes.forEach((node, index) => {
+      if (index > 0 && node.nodeType === Node.ELEMENT_NODE) {
+        const tag = (node as HTMLElement).tagName.toLowerCase()
+        if (blockTags.includes(tag)) {
+          sanitized.appendChild(document.createElement('br'))
+        }
+      }
+      sanitized.appendChild(sanitize(node))
+    })
 
     const tempDiv = document.createElement('div')
     tempDiv.appendChild(sanitized)
