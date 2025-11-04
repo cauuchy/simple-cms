@@ -356,11 +356,26 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
     const html = e.clipboardData.getData('text/html')
     const text = e.clipboardData.getData('text/plain')
 
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0 || !editorRef.current) return
+
+    const range = selection.getRangeAt(0)
+    range.deleteContents()
+
     if (!html) {
-      document.execCommand('insertText', false, text)
-      if (editorRef.current) {
-        onChange(editorRef.current.innerHTML || '')
-      }
+      const lines = text.split('\n')
+      const fragment = document.createDocumentFragment()
+      lines.forEach((line, index) => {
+        if (index > 0) {
+          fragment.appendChild(document.createElement('br'))
+        }
+        fragment.appendChild(document.createTextNode(line))
+      })
+      range.insertNode(fragment)
+      range.collapse(false)
+      selection.removeAllRanges()
+      selection.addRange(range)
+      onChange(editorRef.current.innerHTML || '')
       return
     }
 
@@ -379,16 +394,12 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
       sanitized.appendChild(sanitize(node))
     })
 
-    const tempDiv = document.createElement('div')
-    tempDiv.appendChild(sanitized)
-
-    // 不要な空白を除去
-    const htmlToInsert = tempDiv.innerHTML.trim()
-    document.execCommand('insertHTML', false, htmlToInsert)
+    range.insertNode(sanitized)
+    range.collapse(false)
+    selection.removeAllRanges()
+    selection.addRange(range)
     
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML || '')
-    }
+    onChange(editorRef.current.innerHTML || '')
   }
 
   const btn = (
