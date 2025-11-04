@@ -313,6 +313,62 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
     }
   }
 
+  const sanitize = (node: Node): Node | DocumentFragment => {
+    if (node.nodeType === Node.TEXT_NODE) return node.cloneNode()
+
+    if (node.nodeType !== Node.ELEMENT_NODE) return document.createTextNode('')
+
+    const el = node as HTMLElement
+    const tag = el.tagName.toLowerCase()
+    const allowed = ['b', 'strong', 'i', 'em', 's', 'del', 'span']
+
+    if (!allowed.includes(tag)) {
+      const fragment = document.createDocumentFragment()
+      el.childNodes.forEach((child) => fragment.appendChild(sanitize(child)))
+      return fragment
+    }
+
+    const newEl = document.createElement(tag)
+    if (tag === 'span') {
+      const bg = el.style.backgroundColor
+      if (bg) newEl.style.backgroundColor = bg
+    }
+
+    el.childNodes.forEach((child) => newEl.appendChild(sanitize(child)))
+    return newEl
+  }
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault()
+
+    const html = e.clipboardData.getData('text/html')
+    const text = e.clipboardData.getData('text/plain')
+
+    if (!html) {
+      document.execCommand('insertText', false, text)
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML || '')
+      }
+      return
+    }
+
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    const sanitized = document.createDocumentFragment()
+    doc.body.childNodes.forEach((node) => sanitized.appendChild(sanitize(node)))
+
+    const tempDiv = document.createElement('div')
+    tempDiv.appendChild(sanitized)
+
+    // 不要な空白を除去
+    const htmlToInsert = tempDiv.innerHTML.trim()
+    document.execCommand('insertHTML', false, htmlToInsert)
+    
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML || '')
+    }
+  }
+
   const btn = (
     opts: { label: React.ReactNode; active?: boolean; onClick: () => void; title?: string }
   ) => (
@@ -364,8 +420,7 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
         contentEditable
         suppressContentEditableWarning
         onInput={() => onChange(editorRef.current?.innerHTML || '')}
-        onPaste={(e) => {
-        }}
+        onPaste={handlePaste}
         onKeyUp={updateFormatState}
         onMouseUp={updateFormatState}
         style={{ minHeight: 280, padding: 16, outline: 'none', color: '#0f172a', lineHeight: 1.7, fontSize: 16 }}
