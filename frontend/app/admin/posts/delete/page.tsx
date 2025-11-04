@@ -4,15 +4,26 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminHeader, { HEADER_HEIGHT } from '../../../../components/AdminHeader'
 import AdminSidebar from '../../../../components/AdminSidebar'
+import { SidebarProvider, useSidebar } from '../../../../components/SidebarContext'
 import { verifyAuth } from '../../../../utils/auth'
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
-export default function DeletePostsPage() {
+function DeletePostsPageContent({ shouldFetchPosts }: { shouldFetchPosts: boolean }) {
   const router = useRouter()
+  const { isOpen } = useSidebar()
+  const [isMobile, setIsMobile] = useState(false)
   const [posts, setPosts] = useState<any[]>([])
   const [error, setError] = useState('')
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const fetchPosts = async () => {
     const res = await fetch(`${apiBase}/api/posts`, {
@@ -26,17 +37,10 @@ export default function DeletePostsPage() {
   }
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const isValid = await verifyAuth(apiBase)
-      if (!isValid) {
-        router.replace('/admin/login')
-        return
-      }
-      setIsCheckingAuth(false)
+    if (shouldFetchPosts) {
       fetchPosts()
     }
-    checkAuth()
-  }, [router, apiBase])
+  }, [shouldFetchPosts])
 
   const deletePost = async (id: number) => {
     if (!confirm('この記事を削除してもよろしいですか？')) return
@@ -49,59 +53,90 @@ export default function DeletePostsPage() {
     fetchPosts()
   }
 
+  return (
+    <div>
+      <AdminHeader />
+      <AdminSidebar />
+      <main style={{ 
+        marginLeft: isMobile ? 0 : (isOpen ? 240 : 0), 
+        marginTop: HEADER_HEIGHT, 
+        padding: '24px', 
+        minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
+        transition: 'margin-left 0.3s ease'
+      }}>
+          <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <h1 style={{ fontSize: 28, color: '#0f172a', marginBottom: 24 }}>記事削除</h1>
+          {error && <div style={{ color: '#dc2626', marginBottom: 16, padding: 12, background: '#fef2f2', borderRadius: 8 }}>{error}</div>}
+          <div style={{ display: 'grid', gap: 12 }}>
+            {posts.length === 0 ? (
+              <div style={{ color: '#64748b', padding: 24, textAlign: 'center', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                記事がありません。
+              </div>
+            ) : (
+              posts.map(p => (
+                <div key={p.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  padding: 16,
+                  background: 'white'
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 16, color: '#0f172a' }}>{p.title}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>ID: {p.id}</div>
+                  </div>
+                  <button
+                    onClick={() => deletePost(p.id)}
+                    style={{
+                      background: '#ef4444',
+                      color: 'white',
+                      border: 0,
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    削除
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+          </div>
+        </main>
+      </div>
+  )
+}
+
+export default function DeletePostsPage() {
+  const router = useRouter()
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [shouldFetchPosts, setShouldFetchPosts] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const isValid = await verifyAuth(apiBase)
+      if (!isValid) {
+        router.replace('/admin/login')
+        return
+      }
+      setIsCheckingAuth(false)
+      setShouldFetchPosts(true)
+    }
+    checkAuth()
+  }, [router])
+
   if (isCheckingAuth) {
     return null
   }
 
   return (
-    <div>
-      <AdminHeader />
-      <AdminSidebar />
-      <main style={{ marginLeft: 240, marginTop: HEADER_HEIGHT, padding: '24px', minHeight: `calc(100vh - ${HEADER_HEIGHT}px)` }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 28, color: '#0f172a', marginBottom: 24 }}>記事削除</h1>
-        {error && <div style={{ color: '#dc2626', marginBottom: 16, padding: 12, background: '#fef2f2', borderRadius: 8 }}>{error}</div>}
-        <div style={{ display: 'grid', gap: 12 }}>
-          {posts.length === 0 ? (
-            <div style={{ color: '#64748b', padding: 24, textAlign: 'center', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12 }}>
-              記事がありません。
-            </div>
-          ) : (
-            posts.map(p => (
-              <div key={p.id} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                border: '1px solid #e2e8f0',
-                borderRadius: 12,
-                padding: 16,
-                background: 'white'
-              }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 16, color: '#0f172a' }}>{p.title}</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>ID: {p.id}</div>
-                </div>
-                <button
-                  onClick={() => deletePost(p.id)}
-                  style={{
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 0,
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  削除
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-        </div>
-      </main>
-    </div>
+    <SidebarProvider>
+      {!isCheckingAuth && <DeletePostsPageContent shouldFetchPosts={shouldFetchPosts} />}
+    </SidebarProvider>
   )
 }
 

@@ -2,13 +2,31 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { HEADER_HEIGHT } from './AdminHeader'
+import { useSidebar } from './SidebarContext'
+import { useEffect, useState } from 'react'
 
 export default function AdminSidebar() {
   const pathname = usePathname()
-  const [isOpen, setIsOpen] = useState(true)
+  const { isOpen, setIsOpen, toggleSidebar } = useSidebar()
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      // モバイルではデフォルトで閉じる
+      if (mobile) {
+        setIsOpen(false)
+      } else {
+        setIsOpen(true)
+      }
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [setIsOpen])
 
   const menuItems = [
     { href: '/admin', label: 'ダッシュボード' },
@@ -31,41 +49,58 @@ export default function AdminSidebar() {
 
   return (
     <>
-      <button
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setIsOpen(!isOpen)
-        }}
-        onMouseDown={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
-        style={{
-          position: 'fixed',
-          left: isOpen ? 240 : 0,
-          top: HEADER_HEIGHT,
-          zIndex: 1001,
-          background: '#1e40af',
-          color: 'white',
-          border: 0,
-          borderTopRightRadius: 8,
-          borderBottomRightRadius: 8,
-          padding: '16px 20px',
-          minWidth: 48,
-          minHeight: 48,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'left 0.3s ease',
-          pointerEvents: 'auto',
-          WebkitTapHighlightColor: 'transparent',
-          userSelect: 'none'
-        }}
-      >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+      {!isMobile && (
+        <button
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleSidebar()
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
+          style={{
+            position: 'fixed',
+            left: isOpen ? 240 : 0,
+            top: HEADER_HEIGHT,
+            zIndex: 1001,
+            background: '#1e40af',
+            color: 'white',
+            border: 0,
+            borderTopRightRadius: 8,
+            borderBottomRightRadius: 8,
+            padding: '16px 20px',
+            minWidth: 48,
+            minHeight: 48,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'left 0.3s ease',
+            pointerEvents: 'auto',
+            WebkitTapHighlightColor: 'transparent',
+            userSelect: 'none'
+          }}
+        >
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
+      {isMobile && isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 998,
+            animation: 'fadeIn 0.3s ease'
+          }}
+          onClick={() => setIsOpen(false)}
+        />
+      )}
       <aside
         style={{
           position: 'fixed',
@@ -89,15 +124,42 @@ export default function AdminSidebar() {
         }}
       >
         <div style={{ padding: '16px' }}>
-          <div style={{ marginBottom: 24 }}>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>メニュー</h2>
-          </div>
+          {isMobile && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>メニュー</h2>
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 4
+                }}
+                aria-label="メニューを閉じる"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          )}
+          {!isMobile && (
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>メニュー</h2>
+            </div>
+          )}
           <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {menuItems.map(item => (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  if (isMobile) {
+                    setIsOpen(false)
+                  }
+                }}
                 style={{
                   display: 'block',
                   padding: '12px 16px',

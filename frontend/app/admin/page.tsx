@@ -4,7 +4,100 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminHeader, { HEADER_HEIGHT } from '../../components/AdminHeader'
 import AdminSidebar from '../../components/AdminSidebar'
+import { SidebarProvider, useSidebar } from '../../components/SidebarContext'
 import { verifyAuth } from '../../utils/auth'
+
+function AdminDashboardContent() {
+  const router = useRouter()
+  const { isOpen } = useSidebar()
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const menuItems = [
+    {
+      title: '記事追加',
+      description: '新しい記事を作成します',
+      href: '/admin/posts',
+      color: '#2563eb'
+    },
+    {
+      title: '記事削除',
+      description: '既存の記事を削除します',
+      href: '/admin/posts/delete',
+      color: '#ef4444'
+    },
+  ]
+
+  return (
+    <div>
+      <AdminHeader />
+      <AdminSidebar />
+      <main style={{ 
+        marginLeft: isMobile ? 0 : (isOpen ? 240 : 0), 
+        marginTop: HEADER_HEIGHT, 
+        padding: '24px', 
+        minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
+        transition: 'margin-left 0.3s ease'
+      }}>
+          <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <h1 style={{ fontSize: 28, color: '#0f172a', marginBottom: 24 }}>管理画面</h1>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+            {menuItems.map((item, index) => (
+              <a
+                key={index}
+                href={item.href}
+                style={{
+                  display: 'block',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  padding: 24,
+                  textDecoration: 'none',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>
+                  {item.title}
+                </div>
+                <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
+                  {item.description}
+                </div>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '6px 12px',
+                  background: item.color,
+                  color: 'white',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600
+                }}>
+                  移動 →
+                </div>
+              </a>
+            ))}
+          </div>
+          </div>
+        </main>
+      </div>
+  )
+}
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -27,75 +120,10 @@ export default function AdminDashboard() {
     return null
   }
 
-  const menuItems = [
-    {
-      title: '記事追加',
-      description: '新しい記事を作成します',
-      href: '/admin/posts',
-      color: '#2563eb'
-    },
-    {
-      title: '記事削除',
-      description: '既存の記事を削除します',
-      href: '/admin/posts/delete',
-      color: '#ef4444'
-    },
-  ]
-
   return (
-    <div>
-      <AdminHeader />
-      <AdminSidebar />
-      <main style={{ marginLeft: 240, marginTop: HEADER_HEIGHT, padding: '24px', minHeight: `calc(100vh - ${HEADER_HEIGHT}px)` }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 28, color: '#0f172a', marginBottom: 24 }}>管理画面</h1>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
-          {menuItems.map((item, index) => (
-            <a
-              key={index}
-              href={item.href}
-              style={{
-                display: 'block',
-                background: 'white',
-                border: '1px solid #e2e8f0',
-                borderRadius: 12,
-                padding: 24,
-                textDecoration: 'none',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>
-                {item.title}
-              </div>
-              <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
-                {item.description}
-              </div>
-              <div style={{
-                display: 'inline-block',
-                padding: '6px 12px',
-                background: item.color,
-                color: 'white',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600
-              }}>
-                移動 →
-              </div>
-            </a>
-          ))}
-        </div>
-        </div>
-      </main>
-    </div>
+    <SidebarProvider>
+      <AdminDashboardContent />
+    </SidebarProvider>
   )
 }
 
